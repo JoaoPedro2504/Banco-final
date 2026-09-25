@@ -1,10 +1,13 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
 import fdb
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_bcrypt import Bcrypt
+from fpdf import FPDF
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'chavesecreta'
 
-app.config['SECRET_KEY'] = 'chave_secreta_da_turma_b'
+bcrypt = Bcrypt(app)
 
 host = "localhost"
 database = r"C:\Users\Aluno\Downloads\BANCO (2).FDB"
@@ -59,44 +62,64 @@ def home():
 @app.route('/novo')
 def novo():
     if 'id_usuario' not in session:
-        flash('precisa estar logado aqui nao ebagunça')
         return redirect(url_for('login'))
-    else:
-        return render_template('novo.html')
+    return render_template('novo.html')
 
 @app.route('/criar', methods=['POST'])
 def criar():
+    if 'id_usuario' not in session:
+        return redirect(url_for('login'))
+
     nome = request.form['nome']
     autor = request.form['autor']
     DATAPUBLICACAO = request.form['DATAPUBLICACAO']
+
     cursor = con.cursor()
+
     try:
         cursor.execute("""SELECT 1 FROM livro WHERE nome = ?""", (nome,))
+
         if cursor.fetchone():
             flash("Erro: Livro já existe!", "error")
             return redirect(url_for('novo'))
-        cursor.execute(""" INSERT INTO livro (nome, autor, DATAPUBLICACAO)
-                       values (?,?,?) RETURNING ID_LIVRO""", (nome, autor, DATAPUBLICACAO))
+
+        cursor.execute("""INSERT INTO livro (nome, autor, DATAPUBLICACAO)
+                          VALUES (?,?,?)
+                          RETURNING ID_LIVRO""",
+                       (nome, autor, DATAPUBLICACAO))
+
         id_livro = cursor.fetchone()[0]
+
         con.commit()
+
         arquivo = request.files['imagem']
         arquivo.save(f'uploads/capa{id_livro}.jpg')
 
         flash("Livro criado com sucesso!", "success")
         return redirect(url_for('index'))
+
     except Exception as e:
         flash(f"Ocorreu um erro: {e}", "error")
         con.rollback()
         return redirect(url_for('novo'))
+
     finally:
         cursor.close()
 
 @app.route('/editar/<int:id>', methods=['GET', 'POST'])
 def editar(id):
+    if 'id_usuario' not in session:
+        return redirect(url_for('login'))
+
     cursor = con.cursor()
+
     try:
-        cursor.execute("""SELECT id_livro, nome, autor, DATAPUBLICACAO FROM livro WHERE id_livro = ?""", (id,))
+        cursor.execute("""SELECT id_livro, nome, autor, DATAPUBLICACAO
+                          FROM livro
+                          WHERE id_livro = ?""", (id,))
+
         livro = cursor.fetchone()
+
         if not livro:
             flash("Livro não encontrado!")
             return redirect(url_for('index'))
@@ -105,40 +128,65 @@ def editar(id):
             nome = request.form['nome']
             autor = request.form['autor']
             DATAPUBLICACAO = request.form['DATAPUBLICACAO']
-            cursor.execute("""update livro set nome = ?, autor = ?, DATAPUBLICACAO = ? where id_livro = ?""", (nome, autor, DATAPUBLICACAO, id))
+
+            cursor.execute("""UPDATE livro
+                              SET nome = ?, autor = ?, DATAPUBLICACAO = ?
+                              WHERE id_livro = ?""",
+                           (nome, autor, DATAPUBLICACAO, id))
+
             con.commit()
+
             flash("Livro editado com sucesso!", "success")
             return redirect(url_for('index'))
+
         else:
             return render_template("editar.html", livro=livro)
+
     except Exception as e:
         flash(f"Ocorreu um erro: {e}", "error")
         con.rollback()
+
     finally:
         cursor.close()
 
 @app.route('/confirmar_delete/<int:id>')
 def confirmar_delete(id):
+    if 'id_usuario' not in session:
+        return redirect(url_for('login'))
+
     cursor = con.cursor()
+
     cursor.execute("""SELECT id_livro, nome, autor, DATAPUBLICACAO
                       FROM livro
                       WHERE id_livro = ?""", (id,))
+
     livro = cursor.fetchone()
+
     cursor.close()
+
     return render_template('confirmar_delete.html', livro=livro)
 
 @app.route('/deletar/<int:id>', methods=['POST'])
 def deletar(id):
+    if 'id_usuario' not in session:
+        return redirect(url_for('login'))
+
     cursor = con.cursor()
+
     try:
-        cursor.execute("""DELETE FROM livro WHERE id_livro = ?""", (id,))
+        cursor.execute("""DELETE FROM livro
+                          WHERE id_livro = ?""", (id,))
+
         con.commit()
+
         flash("Livro deletado com sucesso!", "success")
         return redirect(url_for('index'))
+
     except Exception as e:
         flash(f"Ocorreu um erro: {e}", "error")
         con.rollback()
         return redirect(url_for('index'))
+
     finally:
         cursor.close()
 
@@ -154,16 +202,22 @@ def cadastrar_usuario():
             return render_template('cadastrar_usuario.html')
 
         senha = generate_password_hash(senha)
+
         cursor = con.cursor()
 
         try:
             cursor.execute("""INSERT INTO usuario (nome, email, senha)
-                              VALUES (?,?,?)""", (nome, email, senha))
+                              VALUES (?,?,?)""",
+                           (nome, email, senha))
+
             con.commit()
+
             flash("Usuário cadastrado com sucesso!", "success")
             return redirect(url_for('login'))
+
         except Exception as e:
             flash(f"Ocorreu um erro: {e}", "error")
+
         finally:
             cursor.close()
 
@@ -183,31 +237,108 @@ def login():
     senha = request.form['senha']
 
     cursor = con.cursor()
-    cursor.execute("""SELECT id_usuario, senha FROM usuario
-                      WHERE nome = ? AND email = ?""", (nome, email))
+
+    cursor.execute("""SELECT id_usuario, senha
+                      FROM usuario
+                      WHERE nome = ? AND email = ?""",
+                   (nome, email))
+
     usuario = cursor.fetchone()
+
     cursor.close()
 
     if usuario and check_password_hash(usuario[1], senha):
         session['id_usuario'] = usuario[0]
         session['tentativas_login'] = 0
+
         return redirect(url_for('index'))
+
     else:
         tentativas = session.get('tentativas_login', 0) + 1
+
         session['tentativas_login'] = tentativas
 
         if tentativas >= 3:
             session['bloqueado'] = True
+
             flash("Você errou a senha 3 vezes. Login bloqueado!", "error")
+
         else:
-            flash(f"Nome, e-mail ou senha incorretos! Tentativa {tentativas} de 3.", "error")
+            flash(
+                f"Nome, e-mail ou senha incorretos! Tentativa {tentativas} de 3.",
+                "error"
+            )
 
         return redirect(url_for('login'))
 
 @app.route('/logout')
 def logout():
     session.pop('id_usuario', None)
+
     return redirect(url_for('index'))
+
+
+@app.route('/livros/relatorio', methods=['GET'])
+def relatorio():
+
+    if 'id_usuario' not in session:
+        return redirect(url_for('login'))
+
+    cursor = con.cursor()
+
+    cursor.execute("""
+        SELECT ID_LIVRO, NOME, AUTOR, DATAPUBLICACAO
+        FROM LIVRO
+        ORDER BY NOME
+    """)
+
+    livros = cursor.fetchall()
+    cursor.close()
+
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+
+    pdf.set_font("Arial", style='B', size=16)
+    pdf.cell(200, 10, "Relatorio de Livros", ln=True, align='C')
+
+    pdf.ln(5)
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    pdf.ln(5)
+
+    pdf.set_font("Arial", size=12)
+
+    for livro in livros:
+        pdf.cell(
+            200,
+            10,
+            f"ID: {livro[0]} - {livro[1]} - {livro[2]} - {livro[3]}",
+            ln=True
+        )
+
+    contador_livros = len(livros)
+
+    pdf.ln(10)
+
+    pdf.set_font("Arial", style='B', size=12)
+
+    pdf.cell(
+        200,
+        10,
+        f"Total de livros cadastrados: {contador_livros}",
+        ln=True,
+        align='C'
+    )
+
+    pdf_path = "relatorio_livros.pdf"
+
+    pdf.output(pdf_path)
+
+    return send_file(
+        pdf_path,
+        as_attachment=True,
+        mimetype='application/pdf'
+    )
 
 if __name__ == "__main__":
     app.run(debug=True)
