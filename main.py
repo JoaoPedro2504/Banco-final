@@ -7,8 +7,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'chave_secreta_da_turma_b'
 
 host = "localhost"
-# database = r"C:\Users\Aluno\Downloads\BANCO_Pereira\BANCO.FDB"
-database = r"C:\Users\Aluno\Downloads\livros-main (1)\livros-main\livros-sql\BANCO_BORELLA\BANCO.FDB"
+database = r"C:\Users\Aluno\Downloads\BANCO (2).FDB"
 user = "sysdba"
 password = "sysdba"
 
