@@ -24,10 +24,10 @@
 
         <form action="{{ url_for('cadastrar_usuario') }}" method="post">
             <label>Digite seu nome completo:</label>
-            <input type="text" name="nome" id="nome" placeholder="Ex.: Luiz Otávio Borella" required>
+            <input type="text" name="nome" id="nome" placeholder="Ex: João Pedro" required>
 
             <label>Digite seu e-mail:</label>
-            <input type="text" name="email" id="email" placeholder="Ex.: usuario@email.com" required>
+            <input type="text" name="email" id="email" placeholder="Ex: usuario@email.com" required>
 
             <label>Digite sua senha:</label>
             <input type="password" name="senha" id="senha" placeholder="Ex.: 1234" required>
@@ -100,18 +100,18 @@
             }
 
             if (min_num == true) {
-                document.getElementById("req-numero").classList.add("cumprido");
+                document.getElementById("req-numero").classList.add("cumprido")
             } else {
-                document.getElementById("req-numero").classList.remove("cumprido");
+                document.getElementById("req-numero").classList.remove("cumprido")
             }
 
             if (min_caractere_esp == true) {
-                document.getElementById("req-especial").classList.add("cumprido");
+                document.getElementById("req-especial").classList.add("cumprido")
             } else {
-                document.getElementById("req-especial").classList.remove("cumprido");
+                document.getElementById("req-especial").classList.remove("cumprido")
             }
 
-        });
+        })
     </script>
 </body>
 </html>
