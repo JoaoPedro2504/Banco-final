@@ -22,16 +22,16 @@
     {% endwith %}
     <form action="{{ url_for('login') }}" method="post">
         <label>Digite seu nome completo:</label>
-        <input type="text" name="nome" id="nome" placeholder="Ex.: Luiz Otávio Borella" required>
+        <input type="text" name="nome" id="nome" placeholder="Ex.: João Pedro" required>
 
         <label>Digite seu e-mail:</label>
         <input type="text" name="email" id="email" placeholder="Ex.: usuario@email.com" required>
 
         <label>Digite sua senha:</label>
-        <input type="password" name="senha" id="senha" placeholder="Ex.: 1234" required>
+        <input type="password" name="senha" id="senha" placeholder="Ex.: 123" required>
 
         <div><button type="submit" class="btn">Entrar</button></div>
-        <a href="{{ url_for('cadastrar_usuario') }}" class="link-cadastro">Ainda não tem uma conta? Cadastre-se</a>
+        <a href="{{ url_for('cadastrar_usuario') }}" class="link-cadastro">Ainda não possui uma conta? Cadastre-se</a>
     </form>
 </main>
 </body>
